@@ -1,9 +1,3 @@
-resource "null_resource" "dockervol" {
-  provisioner "local-exec" {
-    command = "mkdir volume/ || true && chmod u=rwx,go=rx volume/"
-  }
-}
-
 module "image" {
   source = "./image"
   image_in = var.image[terraform.workspace]
@@ -16,17 +10,12 @@ resource "random_string" "random" {
   upper   = false
 }
 
-resource "docker_container" "nodered_container" {
-  depends_on = [null_resource.dockervol]
+module "container" {
+  source = "./container"
   count = local.container_count
-  name  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
-  image = module.image.image_out
-  ports {
-    internal = var.int_port
-    external = var.ext_port[terraform.workspace][count.index]
-  }
-  volumes {
-    container_path = "/data"
-    host_path      = "${path.cwd}/volume"
-  }
+  name_in  = join("-", ["nodered", terraform.workspace, random_string.random[count.index].result])
+  image_in = module.image.image_out
+  int_port_in = var.int_port
+  ext_port_in = var.ext_port[terraform.workspace][count.index]
+  container_path_in = "/data"
 }
